@@ -1,0 +1,42 @@
+name: "google_keep"
+display_name: "Google Keep"
+description: "Read, add to, check off and clear your Google Keep lists by voice (shopping list, to-dos). Uses the unofficial Keep API with a Google master token."
+version: "0.1.0"
+min_jarvis_version: "0.9.0"
+license: Apache-2.0
+author:
+  github: "opticon454"
+categories: ["productivity", "shopping"]
+keywords: ["keep", "google keep", "list", "shopping list", "to do", "todo", "add to my list", "check off", "tick off", "groceries"]
+
+components:
+  - type: command
+    name: google_keep
+    path: commands/google_keep/command.py
+
+packages:
+  - name: gkeepapi
+    version: ">=0.16.0"
+
+secrets:
+  - key: GOOGLE_KEEP_EMAIL
+    scope: integration
+    value_type: string
+    required: true
+    is_sensitive: false
+    description: "Google account email that owns the Keep lists"
+    friendly_name: "Google account email"
+  - key: GOOGLE_KEEP_MASTER_TOKEN
+    scope: integration
+    value_type: string
+    required: true
+    is_sensitive: true
+    description: "Google master token for that account (see the README for how to obtain it). It grants broad access to the account."
+    friendly_name: "Master token"
+  - key: GOOGLE_KEEP_DEFAULT_LIST
+    scope: integration
+    value_type: string
+    required: false
+    is_sensitive: false
+    description: "List used when you do not name one (default: Shopping)"
+    friendly_name: "Default list"
