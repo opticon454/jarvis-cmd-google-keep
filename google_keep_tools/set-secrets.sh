@@ -7,7 +7,7 @@
 # Docker is (press Enter for this machine, or type user@host) and then asks for:
 #
 #   host        where the node's Docker runs                   (default: this machine)
-#   container   the node's container name                      (default: jarvis-node; see `docker ps` on that host)
+#   container   the node's container name                      (default: the running jarvis-node* container found, else jarvis-node)
 #   email       the Google account that owns the Keep lists
 #   token       the master token from get-master-token.sh      (typed hidden; never shown or kept in shell history)
 #   list        the list used when you do not name one         (default: Shopping)
@@ -64,7 +64,14 @@ fi
 
 RUNNING=$(dk ps --format '{{.Names}}' 2>/dev/null) || fail "could not run docker${HOST:+ on $HOST} (is Docker running, and can you use it?)."
 
-ask CONTAINER "Node container name" "jarvis-node"
+# Suggest the node container: the only running container whose name starts with jarvis-node, else jarvis-node.
+CANDIDATES=$(printf '%s\n' "$RUNNING" | grep '^jarvis-node' || true)
+DEFAULT_CONTAINER=jarvis-node
+if [ "$(printf '%s' "$CANDIDATES" | grep -c .)" = 1 ]; then DEFAULT_CONTAINER=$CANDIDATES; fi
+if [ "$(printf '%s' "$CANDIDATES" | grep -c .)" -gt 1 ]; then
+  echo "Node containers found${HOST:+ on $HOST}: $(printf '%s' "$CANDIDATES" | tr '\n' ' ')"
+fi
+ask CONTAINER "Node container name" "$DEFAULT_CONTAINER"
 printf '%s\n' "$RUNNING" | grep -qx -- "$CONTAINER" \
   || fail "no running container called '$CONTAINER'${HOST:+ on $HOST}. Running there: $(printf '%s' "$RUNNING" | tr '\n' ' ')
 If the node runs on a different machine, run this again and give its user@host."

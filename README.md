@@ -101,7 +101,7 @@ It asks for:
 | Question             | Default                                | Notes                                                    |
 | -------------------- | -------------------------------------- | -------------------------------------------------------- |
 | Where Docker runs    | this machine                           | Enter, or `user@host` (asks for the SSH password once)   |
-| Node container name  | `jarvis-node`                          | Press Enter to accept, or type yours (see `docker ps`)   |
+| Node container name  | the `jarvis-node*` container it finds  | Press Enter to accept, or type yours (see `docker ps`)   |
 | Google account email | none                                   | The account that owns the Keep lists                     |
 | Master token         | none                                   | From step 1, typed hidden                                |
 | Default list name    | `Shopping`                             | Press Enter to accept                                    |
