@@ -7,6 +7,7 @@
 2. In the browser's developer tools, copy the value of the ``oauth_token`` cookie (it starts ``oauth2_4/``).
 3. Run this script and paste the cookie when asked. It prints the master token; give it to Jarvis as
    ``GOOGLE_KEEP_MASTER_TOKEN`` and keep it secret: it grants broad access to the account.
+   (``set-secrets.sh`` does this step for you: it asks for the cookie and makes the master token itself.)
 
 The cookie is read with a hidden prompt so it does not end up in shell history.
 """
@@ -22,6 +23,8 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Get a Google master token for Google Keep")
     parser.add_argument("email", nargs="?", help="the Google account email (asked for when omitted)")
     parser.add_argument("--android-id", default=DEFAULT_ANDROID_ID, help="a 16 hex digit device id")
+    parser.add_argument("--stdin", action="store_true",
+                        help="read the oauth_token cookie from standard input and print only the token (for scripts)")
     args = parser.parse_args()
 
     try:
@@ -34,7 +37,10 @@ def main() -> int:
     if "@" not in email:
         print("That does not look like an email address.", file=sys.stderr)
         return 1
-    oauth_token = getpass.getpass("oauth_token cookie value: ").strip()
+    if args.stdin:
+        oauth_token = sys.stdin.readline().strip()
+    else:
+        oauth_token = getpass.getpass("oauth_token cookie value: ").strip()
     if not oauth_token.startswith("oauth2_4/"):
         print("That does not look like the oauth_token cookie (it should start with oauth2_4/).", file=sys.stderr)
         return 1

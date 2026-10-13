@@ -9,7 +9,8 @@
 #   host        where the node's Docker runs                   (default: this machine)
 #   container   the node's container name                      (default: the running jarvis-node* container found, else jarvis-node)
 #   email       the Google account that owns the Keep lists
-#   token       the master token from get-master-token.sh      (typed hidden; never shown or kept in shell history)
+#   cookie      the oauth_token cookie copied from the browser  (typed hidden; it is turned into the master token here)
+#               (or press Enter and give a master token you already have)
 #   list        the list used when you do not name one         (default: Shopping)
 #
 # Over SSH it opens one connection (password or key, you are asked at most once). Values go to the container on standard
@@ -25,13 +26,13 @@ ask() {
   local var=$1 prompt=$2 default=${3-} mode=${4-} reply
   while true; do
     if [ -n "$default" ]; then prompt_text="$prompt [$default]: "; else prompt_text="$prompt: "; fi
-    if [ "$mode" = hidden ]; then
+    if [ "$mode" = hidden ] || [ "$mode" = hidden-optional ]; then
       IFS= read -rsp "$prompt_text" reply; echo
     else
       IFS= read -rp "$prompt_text" reply
     fi
     reply=${reply:-$default}
-    if [ -n "$reply" ] || [ "$mode" = optional ]; then printf -v "$var" '%s' "$reply"; return; fi
+    if [ -n "$reply" ] || [ "$mode" = optional ] || [ "$mode" = hidden-optional ]; then printf -v "$var" '%s' "$reply"; return; fi
     echo "A value is required."
   done
 }
@@ -79,7 +80,29 @@ If the node runs on a different machine, run this again and give its user@host."
 ask KEEP_EMAIL "Google account email (owns the Keep lists)" ""
 case $KEEP_EMAIL in *@*.*) ;; *) fail "'$KEEP_EMAIL' does not look like an email address." ;; esac
 
-ask KEEP_TOKEN "Master token (hidden; starts with aas_et/)" "" hidden
+# The oauth_token cookie from the browser is turned into the master token here, on this machine, so there is nothing
+# to convert by hand. (A master token you already have can be entered instead.)
+echo
+echo "Paste the oauth_token cookie value copied from the browser (it starts with oauth2_4/)."
+echo "Press Enter on an empty line instead if you already have a master token (starts with aas_et/)."
+ask KEEP_COOKIE "oauth_token cookie (hidden)" "" "hidden-optional"
+if [ -n "$KEEP_COOKIE" ]; then
+  case $KEEP_COOKIE in oauth2_4/*) ;; *) fail "that does not look like the oauth_token cookie; it must start with oauth2_4/." ;; esac
+  command -v python3 >/dev/null 2>&1 || fail "python3 is needed on this machine to make the master token."
+  VENV="${GKEEP_VENV:-$HOME/.venvs/gkeep}"
+  HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+  if [ ! -x "$VENV/bin/python" ]; then
+    echo "Creating a Python environment in $VENV (first time only) ..."
+    python3 -m venv "$VENV" || fail "could not create it. On Debian or Ubuntu run: sudo apt install python3-venv"
+  fi
+  "$VENV/bin/python" -c 'import gpsoauth' 2>/dev/null || "$VENV/bin/pip" install -q gpsoauth || fail "could not install gpsoauth."
+  echo "Asking Google for the master token ..."
+  KEEP_TOKEN=$(printf '%s\n' "$KEEP_COOKIE" | "$VENV/bin/python" "$HERE/get_master_token.py" --stdin "$KEEP_EMAIL") \
+    || fail "Google did not give a master token. The cookie is single use and short lived: copy a fresh one and run this again."
+  unset KEEP_COOKIE
+else
+  ask KEEP_TOKEN "Master token (hidden; starts with aas_et/)" "" hidden
+fi
 case $KEEP_TOKEN in aas_et/*) ;; *) echo "Note: the token does not start with aas_et/. Continuing; check it if the login fails." ;; esac
 
 ask KEEP_LIST "Default list name" "Shopping"
