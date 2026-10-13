@@ -65,15 +65,22 @@ only list you have if there is just one. Plain notes are ignored; only Keep **li
 
 ### 1. Install the package on the node
 
-From a Pantry that lists it (a node whose `command_store_url` points at that Pantry):
+The node's container name is `jarvis-node` (the Nemesis headless node). For the Raspberry Pi voice node it is
+`jarvis-node-audio`. Set it once; every command below, and the helper script in step 3, use `$NODE` and default to
+`jarvis-node`:
 
 ```bash
-docker exec -w /app <node-container> python scripts/command_store.py install google_keep
-docker exec <node-container> pip install gkeepapi    # only if the installer did not pull it in
+export NODE=jarvis-node        # or jarvis-node-audio on the Pi
 ```
 
-`<node-container>` is the node's container name, for example `jarvis-node` or `jarvis-node-audio`. A private package is
-added to a Pantry with `POST /v1/admin/commands/from-repo` and this repository's URL.
+Install the package from a Pantry that lists it (a node whose `command_store_url` points at that Pantry):
+
+```bash
+docker exec -w /app "$NODE" python scripts/command_store.py install google_keep
+docker exec "$NODE" pip install gkeepapi    # only if the installer did not pull it in
+```
+
+A private package is added to a Pantry with `POST /v1/admin/commands/from-repo` and this repository's URL.
 
 The installer puts `gkeepapi` in the container's writable layer, so run the `pip install` again after any recreate of
 the node container.
@@ -112,7 +119,7 @@ with the `integration` scope:
 
 | It asks for                | Default         | Notes                                                                    |
 | -------------------------- | --------------- | ------------------------------------------------------------------------ |
-| Node container name        | `jarvis-node`   | Press Enter to accept. Use `jarvis-node-audio` for the Pi                |
+| Node container name        | `$NODE`, else `jarvis-node` | Press Enter to accept. Use `jarvis-node-audio` for the Pi    |
 | Google account email       | none            | The account that owns the Keep lists                                     |
 | Master token               | none            | Typed hidden, so it is not echoed or kept in shell history               |
 | Default list name          | `Shopping`      | Press Enter to accept                                                    |
@@ -134,7 +141,7 @@ You can instead fill in the same fields in the Jarvis admin portal or mobile app
 The helper offers to do this. By hand:
 
 ```bash
-docker restart <node-container>
+docker restart "$NODE"
 ```
 
 so it reloads its commands.
@@ -146,7 +153,7 @@ so it reloads its commands.
 3. "Add milk to my shopping list", then open Keep: the item appears within a few seconds.
 4. "Check off milk", then "clear the ticked items from my shopping list".
 
-The node log (`docker logs <node-container>`) shows the command running and any error.
+The node log (`docker logs "$NODE"`) shows the command running and any error.
 
 ## Troubleshooting
 
@@ -156,7 +163,7 @@ The node log (`docker logs <node-container>`) shows the command running and any 
 | "Google rejected the Keep login"                       | Token revoked, expired or for a different account. Get a new one (step 2)                  |
 | `get_master_token.py`: not the `oauth_token` cookie    | You copied the wrong cookie or an empty value; it must start with `oauth2_4/`              |
 | `get_master_token.py`: "Google did not return a token" | The cookie was already used or expired. Repeat step 2 from the EmbeddedSetup page          |
-| "The Google Keep library is not installed"             | `docker exec <node-container> pip install gkeepapi`, then restart                          |
+| "The Google Keep library is not installed"             | `docker exec "$NODE" pip install gkeepapi`, then restart                          |
 | "I couldn't find a Keep list called X"                 | The title does not match. Say the list name as it appears in Keep, or set the default list |
 | `externally-managed-environment` from pip              | Use the virtual environment in step 2; do not use `--break-system-packages`                |
 | Worked, then stopped with no change on your side       | Google changed the private API. Upgrade `gkeepapi` and check its issue tracker             |

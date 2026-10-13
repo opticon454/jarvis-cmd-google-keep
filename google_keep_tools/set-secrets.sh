@@ -6,7 +6,7 @@
 # Run it on the machine that runs the node's Docker container (the Nemesis host for `jarvis-node`, the Raspberry Pi for
 # `jarvis-node-audio`). It asks for:
 #
-#   container   the node's container name                       (default: jarvis-node)
+#   container   the node's container name                       (default: $NODE, else jarvis-node)
 #   email       the Google account that owns the Keep lists
 #   token       the master token from get_master_token.py       (typed hidden; never shown or kept in shell history)
 #   list        the list used when you do not name one          (default: Shopping)
@@ -36,7 +36,7 @@ ask() {
 
 command -v docker >/dev/null 2>&1 || fail "docker is not installed or not on PATH on this machine."
 
-ask CONTAINER "Node container name" "jarvis-node"
+ask CONTAINER "Node container name" "${NODE:-jarvis-node}"
 docker ps --format '{{.Names}}' | grep -qx -- "$CONTAINER" \
   || fail "no running container called '$CONTAINER'. Running containers: $(docker ps --format '{{.Names}}' | tr '\n' ' ')"
 
