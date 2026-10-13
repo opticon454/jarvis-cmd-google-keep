@@ -102,21 +102,26 @@ Optional: `--android-id` takes a 16 hex digit device id if you want the token ti
 
 ### 3. Give the node the secrets
 
-Set them in the node's encrypted secret store, with the `integration` scope. In the Jarvis admin portal or mobile app,
-open the package's settings and fill in the fields. Or from a shell on the node's host, without leaving the token in your
-shell history:
+Run the helper on the machine that runs the node's container (the Nemesis host for `jarvis-node`, the Raspberry Pi for
+`jarvis-node-audio`). It asks the questions one at a time and stores the answers in the node's encrypted secret store
+with the `integration` scope:
 
 ```bash
-read -rsp 'Master token: ' TOKEN; echo
-docker exec -e TOKEN <node-container> python -c \
-  "import os; from services.secret_service import set_secret; set_secret('GOOGLE_KEEP_MASTER_TOKEN', os.environ['TOKEN'], 'integration')"
-docker exec <node-container> python -c \
-  "from services.secret_service import set_secret; set_secret('GOOGLE_KEEP_EMAIL', 'you@gmail.com', 'integration')"
-# optional, otherwise "Shopping":
-docker exec <node-container> python -c \
-  "from services.secret_service import set_secret; set_secret('GOOGLE_KEEP_DEFAULT_LIST', 'Groceries', 'integration')"
-unset TOKEN
+./google_keep_tools/set-secrets.sh
 ```
+
+| It asks for                | Default         | Notes                                                                    |
+| -------------------------- | --------------- | ------------------------------------------------------------------------ |
+| Node container name        | `jarvis-node`   | Press Enter to accept. Use `jarvis-node-audio` for the Pi                |
+| Google account email       | none            | The account that owns the Keep lists                                     |
+| Master token               | none            | Typed hidden, so it is not echoed or kept in shell history               |
+| Default list name          | `Shopping`      | Press Enter to accept                                                    |
+
+It then shows what it will store (the token only as a length), asks you to confirm, stores the three secrets, offers to
+install `gkeepapi` in the container if it is missing, and offers to restart the container (step 4). The values are passed
+to the container as environment variables, so they never appear in a command line.
+
+You can instead fill in the same fields in the Jarvis admin portal or mobile app, in the package's settings.
 
 | Secret                     | Sensitive | Required | Meaning                                         |
 | -------------------------- | --------- | -------- | ----------------------------------------------- |
@@ -125,6 +130,8 @@ unset TOKEN
 | `GOOGLE_KEEP_DEFAULT_LIST` | no        | no       | List used when you do not name one (`Shopping`) |
 
 ### 4. Restart the node
+
+The helper offers to do this. By hand:
 
 ```bash
 docker restart <node-container>
@@ -172,6 +179,7 @@ The tests use fakes shaped like gkeepapi's nodes, so they run offline. The live 
 commands/google_keep/command.py          the voice command
 google_keep_shared/keep_service.py       list logic (matching, adding, checking), unit tested
 google_keep_tools/get_master_token.py    one-off helper to obtain the master token
+google_keep_tools/set-secrets.sh         asks for the settings and stores them on the node
 tests/                                   offline tests with fakes
 jarvis_package.yaml                      the Pantry manifest (secrets, packages)
 ```
