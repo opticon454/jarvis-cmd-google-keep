@@ -63,88 +63,53 @@ only list you have if there is just one. Plain notes are ignored; only Keep **li
 
 ## Install and set up
 
-### 1. Install the package on the node
+Two scripts, run in order. Each one asks for what it needs, so there is nothing to edit.
 
-Find the name of your node's container with `docker ps`. The examples use `jarvis-node`, the name in Jarvis's reference
-Docker setup; the voice-node image is commonly run as `jarvis-node-audio`, and your own compose file may differ. Set it
-once; every command below, and the helper script in step 3, use `$NODE` and default to `jarvis-node`:
+### Step 1: get a master token
 
-```bash
-export NODE=jarvis-node        # your node's container name, from `docker ps`
-```
-
-Install the package from a Pantry that lists it (a node whose `command_store_url` points at that Pantry):
+Run this on a machine with a browser:
 
 ```bash
-docker exec -w /app "$NODE" python scripts/command_store.py install google_keep
-docker exec "$NODE" pip install gkeepapi    # only if the installer did not pull it in
+./google_keep_tools/get-master-token.sh
 ```
 
-A private package is added to a Pantry with `POST /v1/admin/commands/from-repo` and this repository's URL.
+It creates its own Python environment the first time (so Debian and Ubuntu's refusal of a system-wide `pip install`
+does not matter; it needs `python3-venv`, `sudo apt install python3-venv` if it complains), then tells you what to copy
+from the browser and asks for:
 
-The installer puts `gkeepapi` in the container's writable layer, so run the `pip install` again after any recreate of
-the node container.
+- your Google email;
+- the `oauth_token` cookie value (typed hidden).
 
-### 2. Get a master token
+To get the cookie: open <https://accounts.google.com/EmbeddedSetup>, sign in as the account that owns the lists and
+approve (the page then looks stuck on "loading"; that is normal), then copy the `oauth_token` cookie for
+`accounts.google.com` from the browser's developer tools. It starts `oauth2_4/` and works once, so use it straight away.
 
-Do this on a machine with a browser. It is a one-off step.
+The script prints a master token starting `aas_et/`. Keep it for step 2, then clear your terminal and clipboard.
 
-1. Open <https://accounts.google.com/EmbeddedSetup>, sign in as the Google account that owns the lists and approve. The
-   page then looks stuck on "loading"; that is normal.
-2. In the browser's developer tools (Application or Storage, then Cookies for `accounts.google.com`), copy the value of
-   the **`oauth_token`** cookie. It starts with `oauth2_4/`. Use it promptly: it is short lived and single use.
-3. Debian and Ubuntu refuse a system-wide `pip install` (PEP 668), so use a virtual environment:
+### Step 2: store it on the node
 
-   ```bash
-   python3 -m venv ~/.venvs/gkeep
-   ~/.venvs/gkeep/bin/pip install gpsoauth
-   cd jarvis-cmd-google-keep          # a checkout of this repository
-   ~/.venvs/gkeep/bin/python google_keep_tools/get_master_token.py you@gmail.com
-   ```
-
-4. Paste the cookie at the hidden prompt. The script prints the master token (it starts with `aas_et/`). Copy it
-   somewhere safe for the next step, then clear your terminal and clipboard.
-
-Optional: `--android-id` takes a 16 hex digit device id if you want the token tied to a fixed one.
-
-### 3. Give the node the secrets
-
-Run the helper on the machine that runs the node's Docker container (for a node on another machine, run it there or
-over SSH). It asks the questions one at a time and stores the answers in the node's encrypted secret store
-with the `integration` scope:
+Run this on the machine that runs the node's Docker container (for a node on another machine, run it there or over
+SSH):
 
 ```bash
 ./google_keep_tools/set-secrets.sh
 ```
 
-| It asks for                | Default         | Notes                                                                    |
-| -------------------------- | --------------- | ------------------------------------------------------------------------ |
-| Node container name        | `$NODE`, else `jarvis-node` | Press Enter to accept, or type your container's name         |
-| Google account email       | none            | The account that owns the Keep lists                                     |
-| Master token               | none            | Typed hidden, so it is not echoed or kept in shell history               |
-| Default list name          | `Shopping`      | Press Enter to accept                                                    |
+It asks for:
 
-It then shows what it will store (the token only as a length), asks you to confirm, stores the three secrets, offers to
-install `gkeepapi` in the container if it is missing, and offers to restart the container (step 4). The values are passed
-to the container as environment variables, so they never appear in a command line.
+| Question             | Default                                | Notes                                                    |
+| -------------------- | -------------------------------------- | -------------------------------------------------------- |
+| Node container name  | `jarvis-node`                          | Press Enter to accept, or type yours (see `docker ps`)   |
+| Google account email | none                                   | The account that owns the Keep lists                     |
+| Master token         | none                                   | From step 1, typed hidden                                |
+| Default list name    | `Shopping`                             | Press Enter to accept                                    |
 
-You can instead fill in the same fields in the Jarvis admin portal or mobile app, in the package's settings.
+It then shows what it will store (the token only as a length) and asks you to confirm. After that it installs the
+package from your Pantry, stores the three secrets in the node's encrypted secret store, installs `gkeepapi` if it is
+missing, and restarts the node. Each of those steps asks first. Values travel as environment variables, so they never
+appear in a command line or in your shell history.
 
-| Secret                     | Sensitive | Required | Meaning                                         |
-| -------------------------- | --------- | -------- | ----------------------------------------------- |
-| `GOOGLE_KEEP_EMAIL`        | no        | yes      | The Google account that owns the lists          |
-| `GOOGLE_KEEP_MASTER_TOKEN` | yes       | yes      | The master token from step 2                    |
-| `GOOGLE_KEEP_DEFAULT_LIST` | no        | no       | List used when you do not name one (`Shopping`) |
-
-### 4. Restart the node
-
-The helper offers to do this. By hand:
-
-```bash
-docker restart "$NODE"
-```
-
-so it reloads its commands.
+You can instead enter the same fields in the Jarvis admin portal or mobile app, in the package's settings.
 
 ## Check that it works
 
@@ -153,19 +118,19 @@ so it reloads its commands.
 3. "Add milk to my shopping list", then open Keep: the item appears within a few seconds.
 4. "Check off milk", then "clear the ticked items from my shopping list".
 
-The node log (`docker logs "$NODE"`) shows the command running and any error.
+The node log (`docker logs jarvis-node`, or your container's name) shows the command running and any error.
 
 ## Troubleshooting
 
 | Symptom                                                | Cause and fix                                                                              |
 | ------------------------------------------------------ | ------------------------------------------------------------------------------------------ |
-| "Google Keep isn't set up yet"                         | The email or token secret is missing on that node; set both (step 3) and restart           |
-| "Google rejected the Keep login"                       | Token revoked, expired or for a different account. Get a new one (step 2)                  |
+| "Google Keep isn't set up yet"                         | The email or token secret is missing on that node; run `set-secrets.sh` again           |
+| "Google rejected the Keep login"                       | Token revoked, expired or for a different account. Run `get-master-token.sh` again, then `set-secrets.sh`                  |
 | `get_master_token.py`: not the `oauth_token` cookie    | You copied the wrong cookie or an empty value; it must start with `oauth2_4/`              |
 | `get_master_token.py`: "Google did not return a token" | The cookie was already used or expired. Repeat step 2 from the EmbeddedSetup page          |
-| "The Google Keep library is not installed"             | `docker exec "$NODE" pip install gkeepapi`, then restart                          |
+| "The Google Keep library is not installed"             | Run `set-secrets.sh` again and accept the `gkeepapi` install                          |
 | "I couldn't find a Keep list called X"                 | The title does not match. Say the list name as it appears in Keep, or set the default list |
-| `externally-managed-environment` from pip              | Use the virtual environment in step 2; do not use `--break-system-packages`                |
+| `externally-managed-environment` from pip              | Use `get-master-token.sh`, which creates its own environment; do not use `--break-system-packages`                |
 | Worked, then stopped with no change on your side       | Google changed the private API. Upgrade `gkeepapi` and check its issue tracker             |
 
 To revoke access, remove the app at <https://myaccount.google.com/permissions> or change the account password, which
@@ -185,7 +150,8 @@ The tests use fakes shaped like gkeepapi's nodes, so they run offline. The live 
 ```text
 commands/google_keep/command.py          the voice command
 google_keep_shared/keep_service.py       list logic (matching, adding, checking), unit tested
-google_keep_tools/get_master_token.py    one-off helper to obtain the master token
+google_keep_tools/get-master-token.sh    asks for the email and cookie, prints the master token
+google_keep_tools/get_master_token.py    the Python helper it runs
 google_keep_tools/set-secrets.sh         asks for the settings and stores them on the node
 tests/                                   offline tests with fakes
 jarvis_package.yaml                      the Pantry manifest (secrets, packages)

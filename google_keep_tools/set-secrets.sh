@@ -12,7 +12,7 @@
 #   list        the list used when you do not name one          (default: Shopping)
 #
 # Values are passed to the container as environment variables, so they never appear in a process list or in a command
-# line. Nothing is written to disk by this script.
+# line. Nothing is written to disk by this script. It also installs the package and restarts the node when you agree.
 
 set -u
 
@@ -55,6 +55,13 @@ echo "  GOOGLE_KEEP_MASTER_TOKEN  = (hidden, ${#KEEP_TOKEN} characters)"
 echo "  GOOGLE_KEEP_DEFAULT_LIST  = $KEEP_LIST"
 read -rp "Continue? [Y/n]: " go
 case ${go:-Y} in [Yy]*) ;; *) echo "Cancelled; nothing was changed."; exit 0 ;; esac
+
+# Install the package into the node from its Pantry (it may already be installed; this just refreshes it).
+read -rp "Install or update the google_keep package in '$CONTAINER' from its Pantry now? [Y/n]: " pk
+case ${pk:-Y} in
+  [Yy]*) docker exec -w /app "$CONTAINER" python scripts/command_store.py install google_keep \
+           || echo "Package install failed; add the package to your Pantry or install it by hand, then run this again." ;;
+esac
 
 export KEEP_EMAIL KEEP_TOKEN KEEP_LIST
 docker exec -w /app -e KEEP_EMAIL -e KEEP_TOKEN -e KEEP_LIST "$CONTAINER" python -c '

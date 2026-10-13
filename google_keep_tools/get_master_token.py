@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
 """Exchange the Google ``oauth_token`` cookie for a master token for Google Keep.
 
-    python3 -m venv ~/.venvs/gkeep && ~/.venvs/gkeep/bin/pip install gpsoauth   # not system-wide: PEP 668
-    ~/.venvs/gkeep/bin/python google_keep_tools/get_master_token.py you@gmail.com
+    ./google_keep_tools/get-master-token.sh      # creates its own Python environment and asks for everything
 
 1. Open https://accounts.google.com/EmbeddedSetup, sign in and approve (the page then looks stuck; that is normal).
 2. In the browser's developer tools, copy the value of the ``oauth_token`` cookie (it starts ``oauth2_4/``).
@@ -21,7 +20,7 @@ DEFAULT_ANDROID_ID = "0123456789abcdef"
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Get a Google master token for Google Keep")
-    parser.add_argument("email", help="the Google account email")
+    parser.add_argument("email", nargs="?", help="the Google account email (asked for when omitted)")
     parser.add_argument("--android-id", default=DEFAULT_ANDROID_ID, help="a 16 hex digit device id")
     args = parser.parse_args()
 
@@ -31,12 +30,16 @@ def main() -> int:
         print("Install it first, in a virtual environment: python3 -m venv ~/.venvs/gkeep && ~/.venvs/gkeep/bin/pip install gpsoauth", file=sys.stderr)
         return 2
 
+    email = (args.email or input("Google account email: ")).strip()
+    if "@" not in email:
+        print("That does not look like an email address.", file=sys.stderr)
+        return 1
     oauth_token = getpass.getpass("oauth_token cookie value: ").strip()
     if not oauth_token.startswith("oauth2_4/"):
         print("That does not look like the oauth_token cookie (it should start with oauth2_4/).", file=sys.stderr)
         return 1
 
-    response = gpsoauth.exchange_token(args.email, oauth_token, args.android_id)
+    response = gpsoauth.exchange_token(email, oauth_token, args.android_id)
     token = response.get("Token")
     if not token:
         print(f"Google did not return a token: {response.get('Error', 'unknown error')}", file=sys.stderr)
