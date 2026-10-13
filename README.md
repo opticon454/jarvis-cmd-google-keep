@@ -65,12 +65,12 @@ only list you have if there is just one. Plain notes are ignored; only Keep **li
 
 ### 1. Install the package on the node
 
-The node's container name is `jarvis-node` (the Nemesis headless node). For the Raspberry Pi voice node it is
-`jarvis-node-audio`. Set it once; every command below, and the helper script in step 3, use `$NODE` and default to
-`jarvis-node`:
+Find the name of your node's container with `docker ps`. The examples use `jarvis-node`, the name in Jarvis's reference
+Docker setup; the voice-node image is commonly run as `jarvis-node-audio`, and your own compose file may differ. Set it
+once; every command below, and the helper script in step 3, use `$NODE` and default to `jarvis-node`:
 
 ```bash
-export NODE=jarvis-node        # or jarvis-node-audio on the Pi
+export NODE=jarvis-node        # your node's container name, from `docker ps`
 ```
 
 Install the package from a Pantry that lists it (a node whose `command_store_url` points at that Pantry):
@@ -109,8 +109,8 @@ Optional: `--android-id` takes a 16 hex digit device id if you want the token ti
 
 ### 3. Give the node the secrets
 
-Run the helper on the machine that runs the node's container (the Nemesis host for `jarvis-node`, the Raspberry Pi for
-`jarvis-node-audio`). It asks the questions one at a time and stores the answers in the node's encrypted secret store
+Run the helper on the machine that runs the node's Docker container (for a node on another machine, run it there or
+over SSH). It asks the questions one at a time and stores the answers in the node's encrypted secret store
 with the `integration` scope:
 
 ```bash
@@ -119,7 +119,7 @@ with the `integration` scope:
 
 | It asks for                | Default         | Notes                                                                    |
 | -------------------------- | --------------- | ------------------------------------------------------------------------ |
-| Node container name        | `$NODE`, else `jarvis-node` | Press Enter to accept. Use `jarvis-node-audio` for the Pi    |
+| Node container name        | `$NODE`, else `jarvis-node` | Press Enter to accept, or type your container's name         |
 | Google account email       | none            | The account that owns the Keep lists                                     |
 | Master token               | none            | Typed hidden, so it is not echoed or kept in shell history               |
 | Default list name          | `Shopping`      | Press Enter to accept                                                    |

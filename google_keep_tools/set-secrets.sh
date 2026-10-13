@@ -3,8 +3,8 @@
 #
 #   ./google_keep_tools/set-secrets.sh
 #
-# Run it on the machine that runs the node's Docker container (the Nemesis host for `jarvis-node`, the Raspberry Pi for
-# `jarvis-node-audio`). It asks for:
+# Run it on the machine that runs the node's Docker container (for a node on another machine, run it there or over SSH).
+# Find the container's name with `docker ps`. It asks for:
 #
 #   container   the node's container name                       (default: $NODE, else jarvis-node)
 #   email       the Google account that owns the Keep lists
