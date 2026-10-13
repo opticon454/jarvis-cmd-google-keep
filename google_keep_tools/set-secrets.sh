@@ -14,8 +14,8 @@
 #   list        the list used when you do not name one         (default: Shopping)
 #
 # Over SSH it opens one connection (password or key, you are asked at most once). Values go to the container on standard
-# input (base64), never on a command line. Nothing is written to disk. It also installs the package and restarts the
-# node, asking before each step.
+# input (base64), never on a command line. Nothing is written to disk. It also installs the package, can turn off the
+# built-in shopping_list command, and restarts the node, asking before each step.
 
 set -u
 
@@ -142,6 +142,24 @@ if ! dk exec "$CONTAINER" python -c 'import gkeepapi' >/dev/null 2>&1; then
   read -rp "Install it now? [Y/n]: " inst
   case ${inst:-Y} in [Yy]*) dk exec "$CONTAINER" pip install -q gkeepapi || echo "pip install failed; install it by hand." ;; esac
 fi
+
+# Jarvis ships its own local "shopping_list" command, and the router prefers it for the phrase "shopping list", so
+# Keep would never be asked. Turning the built-in one off sends those requests to Keep.
+echo
+echo "Jarvis has a built-in shopping_list command that would answer \"what's on my shopping list\" before Keep does."
+read -rp "Turn it off on '$CONTAINER' so shopping list requests go to Google Keep? [Y/n]: " off
+case ${off:-Y} in
+  [Yy]*)
+    printf '%s\n' 'from db import SessionLocal' \
+      'from repositories.command_registry_repository import CommandRegistryRepository' \
+      'db = SessionLocal()' \
+      'CommandRegistryRepository(db).set_enabled("shopping_list", False)' \
+      'db.close()' \
+      'print("built-in shopping_list turned off")' \
+      | dk exec -i -w /app "$CONTAINER" python - \
+      || echo "Could not turn it off; see the README, 'Use Keep instead of the built-in shopping list'." ;;
+  *) echo "Left the built-in shopping_list on. Say \"Google Keep\" in your request to reach Keep." ;;
+esac
 
 read -rp "Restart '$CONTAINER' now so it reloads its commands? [Y/n]: " rs
 case ${rs:-Y} in [Yy]*) dk restart "$CONTAINER" >/dev/null && echo "Restarted." ;; *) echo "Not restarted; restart it before testing." ;; esac

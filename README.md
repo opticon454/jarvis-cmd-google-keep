@@ -93,7 +93,8 @@ You do not need to make the master token yourself: the script takes the cookie a
 
 It then shows what it will store (the token only as a length) and asks you to confirm. After that it installs the
 package from your Pantry, stores the three secrets in the node's encrypted secret store, installs `gkeepapi` if it is
-missing, and restarts the node. Each of those steps asks first. Values are sent on standard input, so they never appear
+missing, offers to turn off the node's built-in `shopping_list` command (see below), and restarts the node. Each of
+those steps asks first. Values are sent on standard input, so they never appear
 in a command line or in your shell history.
 
 The first run creates a small Python environment in `~/.venvs/gkeep` on the machine you run the script from (it needs
@@ -103,12 +104,42 @@ refuse a system-wide `pip install` (PEP 668).
 You can instead enter the same fields in the Jarvis admin portal or mobile app, in the package's settings.
 `google_keep_tools/get-master-token.sh` is still there if you only want to print a master token.
 
+## Use Keep instead of the built-in shopping list
+
+Jarvis ships its own local `shopping_list` command, and its router prefers it for the phrase "shopping list". Until it
+is turned off, "what's on my shopping list" is answered from Jarvis's own list and never reaches Keep, even though Keep
+is installed. (The built-in list is separate: it holds whatever was added to it by voice, and none of your Keep items.)
+
+`set-secrets.sh` asks "Turn it off ... so shopping list requests go to Google Keep? [Y/n]" and does it for you. By
+hand, on the node's host (`jarvis-node` is your container's name):
+
+```bash
+docker exec -i -w /app jarvis-node python - <<'PY'
+from db import SessionLocal
+from repositories.command_registry_repository import CommandRegistryRepository
+db = SessionLocal()
+CommandRegistryRepository(db).set_enabled("shopping_list", False)   # True turns it back on
+db.close()
+PY
+docker restart jarvis-node
+```
+
+After the restart the node advertises one tool fewer. Notes:
+
+- **Per node:** it is stored in that node's own database, so do it on every node you talk to.
+- **Reversible:** run the same snippet with `True` to bring the built-in list back.
+- **Config pushes:** the command-center can push command on/off states to a node. If "shopping list" starts reaching the
+  built-in list again, run the snippet again.
+- **Related commands:** only `shopping_list` is turned off. `export_shopping_list` and any other commands are untouched.
+
 ## Check that it works
 
 1. In the Keep app, make sure a checklist called **Shopping** exists (or set `GOOGLE_KEEP_DEFAULT_LIST`).
 2. Say, or send as text: "what lists do I have in Keep". It should name your lists.
 3. "Add milk to my shopping list", then open Keep: the item appears within a few seconds.
 4. "Check off milk", then "clear the ticked items from my shopping list".
+5. If "what's on my shopping list" reads items that are not in Keep, the built-in list answered: see
+   "Use Keep instead of the built-in shopping list" above.
 
 The node log (`docker logs jarvis-node`, or your container's name) shows the command running and any error.
 
@@ -121,6 +152,7 @@ The node log (`docker logs jarvis-node`, or your container's name) shows the com
 | "does not look like the oauth_token cookie"            | You copied the wrong cookie or an empty value; it must start with `oauth2_4/`              |
 | "Google did not give a master token"                   | The cookie was already used or expired. Repeat step 1 for a fresh one                      |
 | "The Google Keep library is not installed"             | Run `set-secrets.sh` again and accept the `gkeepapi` install                          |
+| "What's on my shopping list" reads items that are not in Keep | The built-in `shopping_list` answered; turn it off (see above) |
 | "I couldn't find a Keep list called X"                 | The title does not match. Say the list name as it appears in Keep, or set the default list |
 | `externally-managed-environment` from pip              | Use `set-secrets.sh`, which creates its own environment; do not use `--break-system-packages`                |
 | Worked, then stopped with no change on your side       | Google changed the private API. Upgrade `gkeepapi` and check its issue tracker             |
