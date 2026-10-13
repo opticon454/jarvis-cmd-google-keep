@@ -40,7 +40,14 @@ list, that one).
 2. Get a master token:
    1. Open <https://accounts.google.com/EmbeddedSetup>, sign in and approve. The page then looks stuck; that is normal.
    2. In the browser's developer tools, copy the value of the `oauth_token` cookie (starts `oauth2_4/`).
-   3. `pip install gpsoauth`, then `python google_keep_tools/get_master_token.py you@gmail.com` and paste the cookie when asked.
+   3. Use a virtual environment (Debian and Ubuntu refuse system-wide `pip install`, PEP 668):
+
+      ```bash
+      python3 -m venv ~/.venvs/gkeep && ~/.venvs/gkeep/bin/pip install gpsoauth
+      ~/.venvs/gkeep/bin/python google_keep_tools/get_master_token.py you@gmail.com
+      ```
+
+      then paste the cookie at the hidden prompt. (`apt install python3-venv` first if `venv` is missing.)
 3. Set the secrets on the node: `GOOGLE_KEEP_EMAIL`, `GOOGLE_KEEP_MASTER_TOKEN` and optionally
    `GOOGLE_KEEP_DEFAULT_LIST`.
 

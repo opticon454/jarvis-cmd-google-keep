@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Exchange the Google ``oauth_token`` cookie for a master token for Google Keep.
 
-    pip install gpsoauth
-    python google_keep_tools/get_master_token.py you@gmail.com
+    python3 -m venv ~/.venvs/gkeep && ~/.venvs/gkeep/bin/pip install gpsoauth   # not system-wide: PEP 668
+    ~/.venvs/gkeep/bin/python google_keep_tools/get_master_token.py you@gmail.com
 
 1. Open https://accounts.google.com/EmbeddedSetup, sign in and approve (the page then looks stuck; that is normal).
 2. In the browser's developer tools, copy the value of the ``oauth_token`` cookie (it starts ``oauth2_4/``).
@@ -28,7 +28,7 @@ def main() -> int:
     try:
         import gpsoauth
     except ImportError:
-        print("Install it first: pip install gpsoauth", file=sys.stderr)
+        print("Install it first, in a virtual environment: python3 -m venv ~/.venvs/gkeep && ~/.venvs/gkeep/bin/pip install gpsoauth", file=sys.stderr)
         return 2
 
     oauth_token = getpass.getpass("oauth_token cookie value: ").strip()
