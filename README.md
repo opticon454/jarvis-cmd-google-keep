@@ -88,8 +88,9 @@ The script prints a master token starting `aas_et/`. Keep it for step 2, then cl
 
 ### Step 2: store it on the node
 
-Run this on the machine that runs the node's Docker container (for a node on another machine, run it there or over
-SSH):
+Run this from any machine that can reach the node's Docker host. It first asks where Docker runs: press Enter if you
+are on that machine, or type `user@host` and it connects over SSH. SSH keys are not needed: it opens one connection and
+asks for the password once (if the host wants one):
 
 ```bash
 ./google_keep_tools/set-secrets.sh
@@ -99,6 +100,7 @@ It asks for:
 
 | Question             | Default                                | Notes                                                    |
 | -------------------- | -------------------------------------- | -------------------------------------------------------- |
+| Where Docker runs    | this machine                           | Enter, or `user@host` (asks for the SSH password once)   |
 | Node container name  | `jarvis-node`                          | Press Enter to accept, or type yours (see `docker ps`)   |
 | Google account email | none                                   | The account that owns the Keep lists                     |
 | Master token         | none                                   | From step 1, typed hidden                                |
@@ -106,8 +108,8 @@ It asks for:
 
 It then shows what it will store (the token only as a length) and asks you to confirm. After that it installs the
 package from your Pantry, stores the three secrets in the node's encrypted secret store, installs `gkeepapi` if it is
-missing, and restarts the node. Each of those steps asks first. Values travel as environment variables, so they never
-appear in a command line or in your shell history.
+missing, and restarts the node. Each of those steps asks first. Values are sent on standard input, so they never appear
+in a command line or in your shell history.
 
 You can instead enter the same fields in the Jarvis admin portal or mobile app, in the package's settings.
 
