@@ -17,6 +17,12 @@
 # input (base64), never on a command line. Nothing is written to disk. It also installs the package, can turn off the
 # built-in shopping_list command, and restarts the node, asking before each step.
 
+# These scripts need bash (not plain sh/dash). Re-run under bash if started with `sh script.sh`.
+if [ -z "${BASH_VERSION:-}" ]; then
+  command -v bash >/dev/null 2>&1 || { echo "Error: bash is required." >&2; exit 1; }
+  exec bash "$0" "$@"
+fi
+
 set -u
 
 fail() { printf 'Error: %s\n' "$*" >&2; exit 1; }
@@ -27,9 +33,9 @@ ask() {
   while true; do
     if [ -n "$default" ]; then prompt_text="$prompt [$default]: "; else prompt_text="$prompt: "; fi
     if [ "$mode" = hidden ] || [ "$mode" = hidden-optional ]; then
-      IFS= read -rsp "$prompt_text" reply; echo
+      IFS= read -rsp "$prompt_text" reply || { echo; fail "input ended before all questions were answered."; }; echo
     else
-      IFS= read -rp "$prompt_text" reply
+      IFS= read -rp "$prompt_text" reply || { echo; fail "input ended before all questions were answered."; }
     fi
     reply=${reply:-$default}
     if [ -n "$reply" ] || [ "$mode" = optional ] || [ "$mode" = hidden-optional ]; then printf -v "$var" '%s' "$reply"; return; fi

@@ -5,6 +5,12 @@
 #
 # It creates a private Python environment (~/.venvs/gkeep) the first time, because Debian and Ubuntu refuse a
 # system-wide `pip install` (PEP 668), then asks for your Google email and the oauth_token cookie.
+
+# These scripts need bash (not plain sh/dash). Re-run under bash if started with `sh script.sh`.
+if [ -z "${BASH_VERSION:-}" ]; then
+  command -v bash >/dev/null 2>&1 || { echo "Error: bash is required." >&2; exit 1; }
+  exec bash "$0" "$@"
+fi
 set -eu
 
 VENV="${GKEEP_VENV:-$HOME/.venvs/gkeep}"
